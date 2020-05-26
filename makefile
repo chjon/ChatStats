@@ -1,6 +1,6 @@
 # Names of tools to use when building (make sure /c/MinGW/bin/ is in the PATH)
-CXX = mingw32-g++
-LD  = mingw32-g++
+CXX = g++ # mingw32-g++
+LD  = g++ # mingw32-g++
 RM  = rm -rf
 
 # Warnings to be raised by the CPP compiler
@@ -37,7 +37,7 @@ $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
 $(TARGET): $(OBJS) | $(OUT_DIR)
-	$(CXX) -o $(TARGET) $(OBJS) $(LDFLAGS)
+	$(CXX) -o $(TARGET) $(OBJS) $(CPPFLAGS) $(LDFLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CPPFLAGS) -c $< -o $@

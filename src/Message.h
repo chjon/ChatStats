@@ -5,10 +5,10 @@
 
 class Message {
 public:
-	Message(const unsigned int senderId, const unsigned long long timestamp, const std::string&& content);
+	Message(const unsigned int senderId = 0, const unsigned long long timestamp = 0, const std::string&& content = "");
 
-	const unsigned int senderId;
-	const unsigned long long timestamp;
+	unsigned int senderId;
+	unsigned long long timestamp;
 	const std::string content;
 };
 

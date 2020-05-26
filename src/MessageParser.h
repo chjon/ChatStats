@@ -4,17 +4,28 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "JsonParser.h"
 #include "Message.h"
 
-class MessageParser {
+struct Participant {
+	std::string m_name;
+};
+
+struct MessageSection {
+	std::vector<Participant>* m_participants;
+	std::vector<Message>* m_messages;
+};
+
+class MessageParser : public JsonParser {
 public:
-	int parse(const std::string& filename, std::vector<Message>& messages);
+	int parse(const std::string& filename, std::vector<Message>& messages, std::vector<std::string>& participants);
 
 private:
-	int openFile(const std::string& filename);
-	int closeFile();
-
-	std::ifstream* m_file = NULL;
+	//template<typename T>
+	// int parseObject(std::ifstream& file, T* obj);
+	int parseMessage(std::ifstream& file, Message* obj);
+	int parseMessageSection(std::ifstream& file, MessageSection* obj);
+	int parseParticipant(std::ifstream& file, Participant* obj);
 };
 
 #endif

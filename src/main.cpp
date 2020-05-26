@@ -16,12 +16,16 @@ int main(const int argc, const char* const* argv) {
 	std::string inputFile(argv[1]);
 	std::string outputFile(argv[2]);
 
+	std::vector<std::string> participants;
 	std::vector<Message> messages;
 	MessageParser parser;
-	if (!parser.parse(inputFile, messages)) {
+	if (!parser.parse(inputFile, messages, participants)) {
 		for (const Message& message : messages) {
 			std::cout << message.content << std::endl;
 		}
+	} else {
+		std::cerr << "Error while parsing" << std::endl;
+		return 1;
 	}
 
 	return 0;
