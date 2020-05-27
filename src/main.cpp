@@ -20,9 +20,7 @@ int main(const int argc, const char* const* argv) {
 	std::vector<Message> messages;
 	MessageParser parser;
 	if (!parser.parse(inputFile, messages, participants)) {
-		for (const Message& message : messages) {
-			std::cout << message.m_content << std::endl;
-		}
+		std::cout << "Parsed " << messages.size() << " messages" << std::endl;
 	} else {
 		std::cerr << "Error while parsing" << std::endl;
 		return 1;

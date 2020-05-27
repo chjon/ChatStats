@@ -26,12 +26,23 @@ private:
 		std::string m_actor;
 	};
 
+	struct Attachment {
+		std::string m_uri;
+		unsigned long long m_timestamp = 0;
+	};
+
+	struct Share {
+		std::string m_link;
+	};
+
 	//template<typename T>
 	// int parseObject(std::ifstream& file, T* obj);
 	static int parseMessage(std::ifstream& file, Message* obj, std::vector<Participant>* participants);
 	static int parseMessageSection(std::ifstream& file, MessageSection* obj);
 	static int parseParticipant(std::ifstream& file, Participant* obj);
 	static int parseReaction(std::ifstream& file, Reaction* obj);
+	static int parseAttachment(std::ifstream& file, Attachment* obj);
+	static int parseShare(std::ifstream& file, Share* obj);
 };
 
 #endif

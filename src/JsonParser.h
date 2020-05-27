@@ -91,6 +91,19 @@ protected:
 		}
 	};
 
+	struct ParserMapValueBool : public ParserMapValue {
+	private:
+		bool* m_b = NULL;
+	public:
+		ParserMapValueBool(bool required, bool* b) :
+			ParserMapValue(required), m_b(b)
+		{}
+
+		int parse(std::ifstream& file) {
+			return parseBoolean(file, m_b);
+		}
+	};
+
 	template<typename T>
 	static int parseFile(const std::string& filename, T* obj, ObjectFieldParser<T> objectFieldParser) {
 		std::ifstream file(filename);
@@ -106,10 +119,12 @@ protected:
 
 	static int parseNumber(std::ifstream& file, unsigned long long* num);
 
+	static int parseBoolean(std::ifstream& file, bool* b);
+
 	template<typename T>
 	static int parseObject(std::ifstream& file, T* obj, std::unordered_map<std::string, ParserMapValue*>& objectFieldParsers) {
 		char curChar;
-		file >> curChar; if (curChar != DELIM_OBJ_BGN) return 1;
+		file >> curChar; if (curChar != DELIM_OBJ_BGN) { std::cerr << "expected " << DELIM_OBJ_BGN << ", received" << curChar << std::endl; return 1; }
 
 		std::unordered_set<std::string> seen;
 		std::string fieldName;
@@ -117,18 +132,18 @@ protected:
 		// Parse fields
 		curChar = DELIM_ITM_SEP;
 		while (curChar == DELIM_ITM_SEP) {
-			if (parseFieldName(file, &fieldName)) { std::cout << "could not parse fieldname" <<  std::endl; return 1; }
-			if (objectFieldParsers.find(fieldName) == objectFieldParsers.end()) { std::cout << "unexpected field " << fieldName << std::endl; return 1; }
-			if (seen.find(fieldName) != seen.end()) { std::cout << "duplicate field " << fieldName << std::endl; return 1; }
-			if (objectFieldParsers.find(fieldName)->second->parse(file)) { std::cout << "could not parse field " << fieldName << std::endl; return 1; }
+			if (parseFieldName(file, &fieldName)) { std::cerr << "could not parse fieldname" << std::endl; return 1; }
+			if (objectFieldParsers.find(fieldName) == objectFieldParsers.end()) { std::cerr << "unexpected field " << fieldName << std::endl; return 1; }
+			if (seen.find(fieldName) != seen.end()) { std::cerr << "duplicate field " << fieldName << std::endl; return 1; }
+			if (objectFieldParsers.find(fieldName)->second->parse(file)) { std::cerr << "could not parse field " << fieldName << std::endl; return 1; }
 			seen.emplace(fieldName);
 			file >> curChar;
 		}
-		if (curChar != DELIM_OBJ_END) return 1;
+		if (curChar != DELIM_OBJ_END) { std::cerr << "expected " << DELIM_OBJ_END << ", received " << curChar << std::endl; return 1; }
 
 		// Ensure that required fields have been found
 		for (auto iter : objectFieldParsers) {
-			if (iter.second->m_required && seen.find(iter.first) == seen.end()) { std::cout << "missing field " << iter.first << std::endl; return 1; }
+			if (iter.second->m_required && seen.find(iter.first) == seen.end()) { std::cerr << "missing field " << iter.first << std::endl; return 1; }
 		}
 
 		return file.bad();
