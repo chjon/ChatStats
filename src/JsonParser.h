@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <functional>
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -117,9 +118,9 @@ protected:
 		curChar = DELIM_ITM_SEP;
 		while (curChar == DELIM_ITM_SEP) {
 			if (parseFieldName(file, &fieldName)) return 1;
-			if (objectFieldParsers.find(fieldName) == objectFieldParsers.end()) return 1;
-			if (seen.find(fieldName) != seen.end()) return 1;
-			if (objectFieldParsers.find(fieldName)->second->parse(file)) return 1;
+			if (objectFieldParsers.find(fieldName) == objectFieldParsers.end()) { std::cout << "unexpected field " << fieldName << std::endl; return 1; }
+			if (seen.find(fieldName) != seen.end()) { std::cout << "duplicate field " << fieldName << std::endl; return 1; }
+			if (objectFieldParsers.find(fieldName)->second->parse(file)) { std::cout << "could not parse field " << fieldName << std::endl; return 1; }
 			seen.emplace(fieldName);
 			file >> curChar;
 		}

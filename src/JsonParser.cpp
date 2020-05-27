@@ -29,11 +29,12 @@ int JsonParser::parseString(std::ifstream& file, std::string* str) {
 int JsonParser::parseNumber(std::ifstream& file, unsigned long long* num) {
 	if (num == NULL) return 1;
 	*num = 0;
-	char curChar = file.peek();
+	char curChar;
+	file >> curChar;
 	if (curChar < '0' || curChar > '9') return 1;
 	while (curChar >= '0' && curChar <= '9') {
-		file >> curChar;
 		*num = (*num) * 10 + (curChar - '0');
+		file >> curChar;
 		curChar = file.peek();
 	}
 	return 0;

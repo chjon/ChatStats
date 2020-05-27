@@ -9,7 +9,7 @@
 
 class MessageParser : public JsonParser {
 public:
-	int parse(const std::string& filename, std::vector<Message>& messages, std::vector<std::string>& participants);
+	static int parse(const std::string& filename, std::vector<Message>& messages, std::vector<std::string>& participants);
 
 private:
 	struct Participant {
@@ -23,11 +23,9 @@ private:
 
 	//template<typename T>
 	// int parseObject(std::ifstream& file, T* obj);
-	int parseMessage(std::ifstream& file, Message* obj);
-	int parseMessageSection(std::ifstream& file, MessageSection* obj);
-	int parseParticipant(std::ifstream& file, Participant* obj);
-
-	std::vector<Participant>* m_participants = NULL;
+	static int parseMessage(std::ifstream& file, Message* obj, std::vector<Participant>* participants);
+	static int parseMessageSection(std::ifstream& file, MessageSection* obj);
+	static int parseParticipant(std::ifstream& file, Participant* obj);
 };
 
 #endif
