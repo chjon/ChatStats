@@ -117,7 +117,7 @@ protected:
 		// Parse fields
 		curChar = DELIM_ITM_SEP;
 		while (curChar == DELIM_ITM_SEP) {
-			if (parseFieldName(file, &fieldName)) return 1;
+			if (parseFieldName(file, &fieldName)) { std::cout << "could not parse fieldname" <<  std::endl; return 1; }
 			if (objectFieldParsers.find(fieldName) == objectFieldParsers.end()) { std::cout << "unexpected field " << fieldName << std::endl; return 1; }
 			if (seen.find(fieldName) != seen.end()) { std::cout << "duplicate field " << fieldName << std::endl; return 1; }
 			if (objectFieldParsers.find(fieldName)->second->parse(file)) { std::cout << "could not parse field " << fieldName << std::endl; return 1; }
@@ -128,7 +128,7 @@ protected:
 
 		// Ensure that required fields have been found
 		for (auto iter : objectFieldParsers) {
-			if (iter.second->m_required && seen.find(iter.first) == seen.end()) return 1;
+			if (iter.second->m_required && seen.find(iter.first) == seen.end()) { std::cout << "missing field " << iter.first << std::endl; return 1; }
 		}
 
 		return file.bad();

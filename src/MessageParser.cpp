@@ -53,13 +53,20 @@ int MessageParser::parseMessage(std::ifstream& file, Message* obj, std::vector<P
 	ParserMapValueNum timeParserVal(true, &obj->m_timestamp);
 	objectFieldParsers.emplace("timestamp_ms", &timeParserVal);
 
-	ParserMapValueStr contentParserVal(true, &obj->m_content);
+	ParserMapValueStr contentParserVal(false, &obj->m_content);
 	objectFieldParsers.emplace("content", &contentParserVal);
 
 	std::string type;
 	ParserMapValueStr typeParserVal(true, &type);
 	objectFieldParsers.emplace("type", &typeParserVal);
 	
+	std::vector<Reaction> reactions;
+	ObjectFieldParser<Reaction> reactionParser = std::bind(parseReaction, _1, _2);
+	ParserMapValueArr<Reaction> reactionParserVal(false, &reactions, reactionParser);
+	objectFieldParsers.emplace("reactions", &reactionParserVal);
+
+	// photos
+
 	return parseObject(file, obj, objectFieldParsers);
 }
 
@@ -74,6 +81,19 @@ int MessageParser::parseMessageSection(std::ifstream& file, MessageSection* obj)
 	ObjectFieldParser<Message> messageParser = std::bind(parseMessage, _1, _2, &obj->m_participants);
 	ParserMapValueArr<Message> messageParserVal(true, &obj->m_messages, messageParser);
 	objectFieldParsers.emplace("messages", &messageParserVal);
+	
+	return parseObject(file, obj, objectFieldParsers);
+}
+
+int MessageParser::parseReaction(std::ifstream& file, Reaction* obj) {
+	std::cout << "Parsing reaction" << std::endl;
+	std::unordered_map<std::string, ParserMapValue*> objectFieldParsers;
+
+	ParserMapValueStr emojiParserVal(true, &obj->m_emoji);
+	objectFieldParsers.emplace("reaction", &emojiParserVal);
+
+	ParserMapValueStr actorParserVal(true, &obj->m_actor);
+	objectFieldParsers.emplace("actor", &actorParserVal);
 	
 	return parseObject(file, obj, objectFieldParsers);
 }

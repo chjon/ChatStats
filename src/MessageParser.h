@@ -21,11 +21,17 @@ private:
 		std::vector<Message> m_messages;
 	};
 
+	struct Reaction {
+		std::string m_emoji;
+		std::string m_actor;
+	};
+
 	//template<typename T>
 	// int parseObject(std::ifstream& file, T* obj);
 	static int parseMessage(std::ifstream& file, Message* obj, std::vector<Participant>* participants);
 	static int parseMessageSection(std::ifstream& file, MessageSection* obj);
 	static int parseParticipant(std::ifstream& file, Participant* obj);
+	static int parseReaction(std::ifstream& file, Reaction* obj);
 };
 
 #endif
