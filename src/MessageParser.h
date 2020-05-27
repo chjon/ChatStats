@@ -7,7 +7,6 @@
 #include "JsonParser.h"
 #include "Message.h"
 
-
 class MessageParser : public JsonParser {
 public:
 	int parse(const std::string& filename, std::vector<Message>& messages, std::vector<std::string>& participants);
@@ -27,6 +26,8 @@ private:
 	int parseMessage(std::ifstream& file, Message* obj);
 	int parseMessageSection(std::ifstream& file, MessageSection* obj);
 	int parseParticipant(std::ifstream& file, Participant* obj);
+
+	std::vector<Participant>* m_participants = NULL;
 };
 
 #endif

@@ -19,21 +19,30 @@ int MessageParser::parse(const std::string& filename, std::vector<Message>& mess
 }
 
 int MessageParser::parseParticipant(std::ifstream& file, Participant* obj) {
-	if (parseString(file, &obj->m_name)) return 1;
-	std::cout << "Succeeded Participant Parsing" << std::endl;
-	return 0;
+	std::cout << "Parsing participant" << std::endl;
+	return (parseString(file, &obj->m_name));
 }
 
 int MessageParser::parseMessage(std::ifstream& file, Message* obj) {
+	std::cout << "Parsing message" << std::endl;
 	std::string sender;
 	std::unordered_map<std::string, ParserMapValue*> objectFieldParsers;
 
-	ObjectFieldParser<unsigned int> senderParser = [](std::ifstream& file, unsigned int* retval){
+	ObjectFieldParser<unsigned int> senderParser = [this](std::ifstream& file, unsigned int* retval){
+		if (m_participants == NULL) return 1;
+
 		std::string sender;
-		parse();
+		if (parseString(file, &sender)) return 1;
+		for (unsigned int i = 0; i < m_participants->size(); ++i) {
+			if (sender == (*m_participants)[i].m_name) {
+				*retval = i;
+				return 0;
+			}
+		}
+		return 1;
 	};
 
-	ParserMapValueStr senderParserVal(true, &sender);
+	ParserMapValueObj<unsigned int> senderParserVal(true, &obj->m_senderId, senderParser);
 	objectFieldParsers.emplace("sender_name", &senderParserVal);
 
 	ParserMapValueNum timeParserVal(true, &obj->m_timestamp);
@@ -43,6 +52,7 @@ int MessageParser::parseMessage(std::ifstream& file, Message* obj) {
 }
 
 int MessageParser::parseMessageSection(std::ifstream& file, MessageSection* obj) {
+	std::cout << "Parsing message section" << std::endl;
 	std::unordered_map<std::string, ParserMapValue*> objectFieldParsers;
 
 	ObjectFieldParser<Participant> participantParser = std::bind(&MessageParser::parseParticipant, this, _1, _2);

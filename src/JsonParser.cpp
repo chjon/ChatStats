@@ -11,9 +11,9 @@ int JsonParser::parseFieldName(std::ifstream& file, std::string* fieldName) {
 
 int JsonParser::parseString(std::ifstream& file, std::string* str) {
 	if (str == NULL) return 1;
-	if (file.peek() != DELIM_STR_BGN) return 1;
+
 	char curChar;
-	file >> curChar;
+	file >> curChar; if (curChar != DELIM_STR_BGN) return 1;
 	
 	std::string out;
 	file >> curChar;

@@ -114,17 +114,16 @@ protected:
 		std::string fieldName;
 
 		// Parse fields
-		curChar = file.peek();
+		curChar = DELIM_ITM_SEP;
 		while (curChar == DELIM_ITM_SEP) {
-			file >> curChar;
 			if (parseFieldName(file, &fieldName)) return 1;
 			if (objectFieldParsers.find(fieldName) == objectFieldParsers.end()) return 1;
-			if (seen.find(fieldName) == seen.end()) return 1;
+			if (seen.find(fieldName) != seen.end()) return 1;
 			if (objectFieldParsers.find(fieldName)->second->parse(file)) return 1;
 			seen.emplace(fieldName);
-			curChar = file.peek();
+			file >> curChar;
 		}
-		file >> curChar; if (curChar != DELIM_OBJ_END) return 1;
+		if (curChar != DELIM_OBJ_END) return 1;
 
 		// Ensure that required fields have been found
 		for (auto iter : objectFieldParsers) {
@@ -135,7 +134,7 @@ protected:
 	}
 
 	template<typename T>
-	static int parseArray(std::ifstream& file, std::vector<T>* arr, const std::unordered_map<std::string, ParserMapValue*>& objectFieldParsers) {
+	static int parseArray(std::ifstream& file, std::vector<T>* arr, ObjectFieldParser<T> objectFieldParser) {
 		if (arr == NULL) return 1;
 
 		char curChar;
@@ -144,12 +143,19 @@ protected:
 		curChar = file.peek();
 		while (curChar != DELIM_ARR_END) {
 			T obj;
-			if (parseObject(file, &obj, objectFieldParsers)) return 1;
+			if (objectFieldParser(file, &obj)) return 1;
 			arr->push_back(obj);
 			file >> curChar; if (curChar != DELIM_ITM_SEP && curChar != DELIM_ARR_END) return 1;
 		}
 
 		return file.bad();
+	}
+
+	template<typename T>
+	static int parseArray(std::ifstream& file, std::vector<T>* arr, const std::unordered_map<std::string, ParserMapValue*>& objectFieldParsers) {
+		using namespace std::placeholders;
+		ObjectFieldParser<T> f = std::bind(parseObject<T>, _1, _2, objectFieldParsers);
+		return parseArray(file, arr, f);
 	}
 };
 
