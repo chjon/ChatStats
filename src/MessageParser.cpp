@@ -161,8 +161,9 @@ int MessageParser::parseAttachment(std::ifstream& file, Attachment* obj) {
 int MessageParser::parseShare(std::ifstream& file, Share* obj) {
 	std::unordered_map<std::string, ParserMapValue*> objectFieldParsers;
 
-	ParserMapValueStr linkParserVal(true, &obj->m_link);
-	objectFieldParsers.emplace("link", &linkParserVal);
+	ParserMapValueStr strParserVal(false, &obj->m_val);
+	objectFieldParsers.emplace("link", &strParserVal);
+	objectFieldParsers.emplace("share_text", &strParserVal);
 	
 	return parseObject(file, obj, objectFieldParsers);
 }

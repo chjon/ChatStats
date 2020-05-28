@@ -32,7 +32,7 @@ private:
 	};
 
 	struct Share {
-		std::string m_link;
+		std::string m_val;
 	};
 
 	//template<typename T>
