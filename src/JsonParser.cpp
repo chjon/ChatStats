@@ -43,9 +43,9 @@ int JsonParser::parseNumber(std::ifstream& file, unsigned long long* num) {
 	if (curChar < '0' || curChar > '9') return 1;
 	while (curChar >= '0' && curChar <= '9') {
 		*num = (*num) * 10 + (curChar - '0');
-		file >> curChar;
-		curChar = file.peek();
+		file.get(curChar);
 	}
+	file.putback(curChar);
 	return file.bad();
 }
 
@@ -54,15 +54,15 @@ int JsonParser::parseBoolean(std::ifstream& file, bool* b) {
 	char curChar;
 	file >> curChar;
 	if (curChar == 't') {
-		file >> curChar; if (curChar != 'r') return 1;
-		file >> curChar; if (curChar != 'u') return 1;
-		file >> curChar; if (curChar != 'e') return 1;
+		file.get(curChar); if (curChar != 'r') return 1;
+		file.get(curChar); if (curChar != 'u') return 1;
+		file.get(curChar); if (curChar != 'e') return 1;
 		*b = true;
 	} else if (curChar == 'f') {
-		file >> curChar; if (curChar != 'a') return 1;
-		file >> curChar; if (curChar != 'l') return 1;
-		file >> curChar; if (curChar != 's') return 1;
-		file >> curChar; if (curChar != 'e') return 1;
+		file.get(curChar); if (curChar != 'a') return 1;
+		file.get(curChar); if (curChar != 'l') return 1;
+		file.get(curChar); if (curChar != 's') return 1;
+		file.get(curChar); if (curChar != 'e') return 1;
 		*b = false;
 	} else {
 		return 1;

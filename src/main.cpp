@@ -21,6 +21,18 @@ int main(const int argc, const char* const* argv) {
 	MessageParser parser;
 	if (!parser.parse(inputFile, messages, participants)) {
 		std::cout << "Parsed " << messages.size() << " messages" << std::endl;
+		std::vector<int> messageCount(participants.size());
+		for (unsigned int i = 0; i < participants.size(); ++i) {
+			messageCount[i] = 0;
+		}
+
+		for (Message message : messages) {
+			++messageCount[message.m_senderId];
+		}
+
+		for (unsigned int i = 0; i < participants.size(); ++i) {
+			std::cout << participants[i] << ": " << messageCount[i] << std::endl;
+		}
 	} else {
 		std::cerr << "Error while parsing" << std::endl;
 		return 1;

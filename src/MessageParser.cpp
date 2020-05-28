@@ -42,7 +42,12 @@ int MessageParser::parseMessage(std::ifstream& file, Message* obj, std::vector<P
 				return 0;
 			}
 		}
-		return 1;
+
+		// Handle participants who have left
+		*retval = participants->size();
+		participants->push_back(Participant{sender});
+
+		return 0;
 	};
 
 	ParserMapValueObj<unsigned int> senderParserVal(true, &obj->m_senderId, senderParser);
@@ -50,6 +55,19 @@ int MessageParser::parseMessage(std::ifstream& file, Message* obj, std::vector<P
 
 	ParserMapValueNum timeParserVal(true, &obj->m_timestamp);
 	objectFieldParsers.emplace("timestamp_ms", &timeParserVal);
+
+	unsigned long long callDuration;
+	ParserMapValueNum callDurationParserVal(false, &callDuration);
+	objectFieldParsers.emplace("call_duration", &callDurationParserVal);
+
+	bool missed;
+	ParserMapValueBool missedParserVal(false, &missed);
+	objectFieldParsers.emplace("missed", &missedParserVal);
+
+	std::vector<Participant> users;
+	ObjectFieldParser<Participant> participantParser = std::bind(parseParticipant, _1, _2);
+	ParserMapValueArr<Participant> participantParserVal(false, &users, participantParser);
+	objectFieldParsers.emplace("users", &participantParserVal);
 
 	ParserMapValueStr contentParserVal(false, &obj->m_content);
 	objectFieldParsers.emplace("content", &contentParserVal);
@@ -69,6 +87,7 @@ int MessageParser::parseMessage(std::ifstream& file, Message* obj, std::vector<P
 	ObjectFieldParser<Attachment> attachmentParser = std::bind(parseAttachment, _1, _2);
 	ParserMapValueObj<Attachment> attachmentParserValObj(false, &attachment, attachmentParser);
 	ParserMapValueArr<Attachment> attachmentParserValArr(false, &attachments, attachmentParser);
+	objectFieldParsers.emplace("audio_files", &attachmentParserValArr);
 	objectFieldParsers.emplace("sticker", &attachmentParserValObj);
 	objectFieldParsers.emplace("photos", &attachmentParserValArr);
 	objectFieldParsers.emplace("videos", &attachmentParserValArr);

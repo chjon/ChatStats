@@ -159,7 +159,7 @@ protected:
 		curChar = file.peek();
 		while (curChar != DELIM_ARR_END) {
 			T obj;
-			if (objectFieldParser(file, &obj)) return 1;
+			if (objectFieldParser(file, &obj)) { std::cerr << "error while parsing index " << arr->size() << std::endl; return 1; }
 			arr->push_back(obj);
 			file >> curChar; if (curChar != DELIM_ITM_SEP && curChar != DELIM_ARR_END) return 1;
 		}
