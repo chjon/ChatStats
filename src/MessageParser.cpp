@@ -13,7 +13,18 @@ int MessageParser::parse(const std::string& filename, std::vector<Message>& mess
 	if (parseFile(filename, &section, f)) return 1;
 	messages = section.m_messages;
 	for (Participant p : section.m_participants) {
-		participantNames.push_back(p.m_name);
+		// Add name if it doesn't already exist
+		bool found = false;
+		for (const std::string& participantName : participantNames) {
+			if (p.m_name == participantName) {
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) {
+			participantNames.push_back(p.m_name);
+		}
 	}
 	return 0;
 }
@@ -56,7 +67,7 @@ int MessageParser::parseMessage(std::ifstream& file, Message* obj, std::vector<P
 	ParserMapValueNum timeParserVal(true, &obj->m_timestamp);
 	objectFieldParsers.emplace("timestamp_ms", &timeParserVal);
 
-	unsigned long long callDuration;
+	long callDuration;
 	ParserMapValueNum callDurationParserVal(false, &callDuration);
 	objectFieldParsers.emplace("call_duration", &callDurationParserVal);
 

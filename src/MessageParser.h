@@ -28,7 +28,7 @@ private:
 
 	struct Attachment {
 		std::string m_uri;
-		unsigned long long m_timestamp = 0;
+		long m_timestamp = 0;
 	};
 
 	struct Share {

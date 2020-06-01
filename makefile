@@ -25,7 +25,7 @@ TARGET := $(OUT_DIR)/$(TARGET)
 
 .PHONY: all clean
 
-all: $(TARGET)
+all: $(OUT_DIR) $(OBJ_DIR) $(TARGET) 
 
 run: $(TARGET)
 	$(TARGET)
@@ -36,10 +36,10 @@ $(OUT_DIR):
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
-$(TARGET): $(OBJS) $(OUT_DIR)
+$(TARGET): $(OBJS) | $(OUT_DIR)
 	$(CXX) -o $(TARGET) $(OBJS) $(CPPFLAGS) $(LDFLAGS)
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(OBJ_DIR)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
 
 clean:

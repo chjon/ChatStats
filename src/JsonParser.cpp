@@ -35,7 +35,7 @@ int JsonParser::parseString(std::ifstream& file, std::string* str) {
 	return file.bad();
 }
 
-int JsonParser::parseNumber(std::ifstream& file, unsigned long long* num) {
+int JsonParser::parseNumber(std::ifstream& file, long* num) {
 	if (num == NULL) return 1;
 	*num = 0;
 	char curChar;

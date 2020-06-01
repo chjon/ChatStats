@@ -80,9 +80,9 @@ protected:
 
 	struct ParserMapValueNum : public ParserMapValue {
 	private:
-		unsigned long long* m_num = NULL;
+		long* m_num = NULL;
 	public:
-		ParserMapValueNum(bool required, unsigned long long* num) :
+		ParserMapValueNum(bool required, long* num) :
 			ParserMapValue(required), m_num(num)
 		{}
 
@@ -117,7 +117,7 @@ protected:
 
 	static int parseString(std::ifstream& file, std::string* str);
 
-	static int parseNumber(std::ifstream& file, unsigned long long* num);
+	static int parseNumber(std::ifstream& file, long* num);
 
 	static int parseBoolean(std::ifstream& file, bool* b);
 
