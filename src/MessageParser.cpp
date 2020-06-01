@@ -11,7 +11,9 @@ int MessageParser::parse(const std::string& filename, std::vector<Message>& mess
 	MessageSection section;
 	ObjectFieldParser<MessageSection> f = std::bind(parseMessageSection, _1, &section);
 	if (parseFile(filename, &section, f)) return 1;
-	messages = section.m_messages;
+
+	messages.insert(std::end(messages), std::begin(section.m_messages), std::end(section.m_messages));
+
 	for (Participant p : section.m_participants) {
 		// Add name if it doesn't already exist
 		bool found = false;
