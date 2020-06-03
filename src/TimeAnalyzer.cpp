@@ -128,7 +128,7 @@ std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::compressDataPoints(const std:
 			}
 		} else {
 			compressed.push_back(original[i]);
-			last = &compressed[i];
+			last = &compressed[compressed.size() - 1];
 		}
 	}
 
