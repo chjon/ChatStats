@@ -1,6 +1,4 @@
-#include <algorithm>
 #include <iostream>
-#include <stdio.h>
 #include <string>
 #include <chrono>
 
@@ -22,6 +20,9 @@ int main(const int argc, const char* const* argv) {
 	std::string timeLogFile = "timelog_temp.csv";
 
 	std::vector<std::string> participants;
+
+	// Parse input files
+	bool isFirstFile = true;
 	while (argIndex < argc) {
 		std::string inputFile(argv[argIndex++]);
 		std::vector<Message> messages;
@@ -40,17 +41,22 @@ int main(const int argc, const char* const* argv) {
 			return 1;
 		}
 
-		if (TimeAnalyzer::outputTimeLog(timeLogFile, messages, participants)) {
+		// Add messages to time analysis
+		if (TimeAnalyzer::outputTimeLog(timeLogFile, isFirstFile, messages, participants)) {
 			std::cerr << "Error while generating time log: " << timeLogFile << std::endl;
 			return 1;
 		}
+
+		isFirstFile = false;
 	}
 
-	printf("date,");
-	for (const std::string& participant : participants) {
-		std::cout << participant << ",";
+	// Do time analysis
+	if (TimeAnalyzer::analyze(timeLogFile, outputFile, participants)) {
+		std::cerr << "Error while analyzing time log: " << timeLogFile << std::endl;
+		return 1;
 	}
-	printf("\n");
+
+	// Do word analysis
 
 	return 0;
 }
