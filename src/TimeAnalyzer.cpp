@@ -21,6 +21,7 @@ int TimeAnalyzer::outputTimeLog(const std::string& outputFile, bool isFirstFile,
 int TimeAnalyzer::analyze(const std::string& inFileStr, const std::string& outFileStr, const std::vector<std::string>& participants) {
 	std::vector<RawDataPoint> rawDataPoints;
 	std::vector<DataPoint> dataPoints;
+	TimeCompStrictness strictness = TimeCompStrictness::MONTH;
 
 	// Read in data points
 	if (readDataPoints(inFileStr, participants.size(), rawDataPoints)) return 1;
@@ -31,13 +32,13 @@ int TimeAnalyzer::analyze(const std::string& inFileStr, const std::string& outFi
 	});
 
 	// Compress data points (by day, week, month, year)
-	dataPoints = transformDataPoints(rawDataPoints, participants.size());
+	dataPoints = transformDataPoints(rawDataPoints, participants.size(), strictness);
 
 	// Smooth out data points (sliding window average or EMA)
 	// dataPoints = smoothEMA(dataPoints, participants.size(), 0.2);
 
 	// Output data points
-	writeDataPoints(outFileStr, participants, dataPoints);
+	writeDataPoints(outFileStr, participants, dataPoints, strictness);
 
 	return 0;
 }
@@ -65,8 +66,7 @@ int TimeAnalyzer::readDataPoints(const std::string& inFileStr, const unsigned in
 	return 0;
 }
 
-std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::transformDataPoints(const std::vector<RawDataPoint>& original, const unsigned int numParticipants) {
-	const TimeCompStrictness strictness = TimeCompStrictness::DAY;
+std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::transformDataPoints(const std::vector<RawDataPoint>& original, const unsigned int numParticipants, TimeCompStrictness strictness) {
 	std::vector<DataPoint> compressed;
 	if (original.size() == 0) return compressed;
 
@@ -139,12 +139,14 @@ std::time_t TimeAnalyzer::getNextTime(const std::time_t startTime, TimeCompStric
 	return std::mktime(&nextTimeInfo);
 }
 
-int TimeAnalyzer::writeDataPoints(const std::string& outFileStr, const std::vector<std::string>& participants, const std::vector<DataPoint>& dataPoints) {
+int TimeAnalyzer::writeDataPoints(const std::string& outFileStr, const std::vector<std::string>& participants, const std::vector<DataPoint>& dataPoints, TimeCompStrictness strictness) {
 	std::ofstream outFile(outFileStr);
 	if (outFile.bad()) return 1;
 
 	// Write headers
-	outFile << "date,";
+	if (strictness <= TimeCompStrictness::YEAR) outFile << "year,";
+	if (strictness <= TimeCompStrictness::MONTH) outFile << "month,";
+	if (strictness <= TimeCompStrictness::DAY) outFile << "day,";
 	for (const std::string& participant : participants) {
 		outFile << participant << ',';
 	}
@@ -153,7 +155,10 @@ int TimeAnalyzer::writeDataPoints(const std::string& outFileStr, const std::vect
 	// Write datapoints
 	for (const DataPoint& dp : dataPoints) {
 		const std::tm* timeInfo = std::localtime(&dp.m_time);
-		outFile << timeInfo->tm_year + 1900 << '-' << timeInfo->tm_mon + 1 << '-' << timeInfo->tm_mday << ',';
+		if (strictness <= TimeCompStrictness::YEAR) outFile << timeInfo->tm_year + 1900 << ',';
+		if (strictness <= TimeCompStrictness::MONTH) outFile << timeInfo->tm_mon + 1 << ',';
+		if (strictness <= TimeCompStrictness::DAY) outFile << timeInfo->tm_mday << ',';
+
 		for (unsigned int i = 0; i < dp.m_count.size(); ++i) {
 			outFile << dp.m_count[i] << ',';
 		}

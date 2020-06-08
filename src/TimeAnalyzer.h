@@ -29,7 +29,7 @@ private:
 	};
 
 	static int readDataPoints(const std::string& inFileStr, const unsigned int numParticipants, std::vector<RawDataPoint>& dataPoints);
-	static int writeDataPoints(const std::string& outFileStr, const std::vector<std::string>& participants, const std::vector<DataPoint>& dataPoints);
+	static int writeDataPoints(const std::string& outFileStr, const std::vector<std::string>& participants, const std::vector<DataPoint>& dataPoints, TimeCompStrictness strictness);
 	static bool isSameTime(const std::time_t a, const std::time_t b, TimeCompStrictness strictness);
 	static std::time_t getNextTime(const std::time_t time, TimeCompStrictness strictness);
 
@@ -39,7 +39,7 @@ private:
 	 * @param numParticipants number of participants
 	 * @return compressed data points
 	 */
-	static std::vector<DataPoint> transformDataPoints(const std::vector<RawDataPoint>& dataPoints, const unsigned int numParticipants);
+	static std::vector<DataPoint> transformDataPoints(const std::vector<RawDataPoint>& dataPoints, const unsigned int numParticipants, TimeCompStrictness strictness);
 	static std::vector<DataPoint> expandDataPoints(const std::vector<DataPoint>& dataPoints, const unsigned int numParticipants, TimeCompStrictness strictness);
 	static std::vector<DataPoint> smoothEMA(const std::vector<DataPoint>& dataPoints, const unsigned int numParticipants, double alpha);
 
