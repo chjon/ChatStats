@@ -8,14 +8,32 @@
 
 int main(const int argc, const char* const* argv) {
 	// Validate options
-	if (argc < 3) {
+	if (argc < 4) {
 		std::cerr << "Usage: " <<
-			argv[0] << " <OUTPUT_FILE> <INPUT_FILE>..." <<
+			argv[0] << " <GRANULARITY> <OUTPUT_FILE> <INPUT_FILE>..." <<
 			std::endl;
 		return 1;
 	}
 
 	int argIndex = 1;
+
+	// Validate granularity
+	std::string granularityStr(argv[argIndex++]);
+	if (granularityStr.size() != 1) {
+		std::cerr << "Granularity must be one of: [d|m|y]" << std::endl;
+		return 1;
+	}
+
+	TimeAnalyzer::Granularity granularity;
+	switch (granularityStr[0]) {
+		case 'd': granularity = TimeAnalyzer::Granularity::DAY; break;
+		case 'm': granularity = TimeAnalyzer::Granularity::MONTH; break;
+		case 'y': granularity = TimeAnalyzer::Granularity::YEAR; break;
+		default:
+			std::cerr << "Granularity must be one of: [d|m|y]" << std::endl;
+			return 1;
+	}
+
 	std::string outputFile(argv[argIndex++]);
 	std::string timeLogFile = "timelog_temp.csv";
 
@@ -51,7 +69,7 @@ int main(const int argc, const char* const* argv) {
 	}
 
 	// Do time analysis
-	if (TimeAnalyzer::analyze(timeLogFile, outputFile, participants)) {
+	if (TimeAnalyzer::analyze(timeLogFile, outputFile, participants, granularity)) {
 		std::cerr << "Error while analyzing time log: " << timeLogFile << std::endl;
 		return 1;
 	}

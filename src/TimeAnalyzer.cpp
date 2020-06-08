@@ -18,10 +18,9 @@ int TimeAnalyzer::outputTimeLog(const std::string& outputFile, bool isFirstFile,
 	return 0;
 }
 
-int TimeAnalyzer::analyze(const std::string& inFileStr, const std::string& outFileStr, const std::vector<std::string>& participants) {
+int TimeAnalyzer::analyze(const std::string& inFileStr, const std::string& outFileStr, const std::vector<std::string>& participants, Granularity granularity) {
 	std::vector<RawDataPoint> rawDataPoints;
 	std::vector<DataPoint> dataPoints;
-	TimeCompStrictness strictness = TimeCompStrictness::MONTH;
 
 	// Read in data points
 	if (readDataPoints(inFileStr, participants.size(), rawDataPoints)) return 1;
@@ -32,13 +31,13 @@ int TimeAnalyzer::analyze(const std::string& inFileStr, const std::string& outFi
 	});
 
 	// Compress data points (by day, week, month, year)
-	dataPoints = transformDataPoints(rawDataPoints, participants.size(), strictness);
+	dataPoints = transformDataPoints(rawDataPoints, participants.size(), granularity);
 
 	// Smooth out data points (sliding window average or EMA)
 	// dataPoints = smoothEMA(dataPoints, participants.size(), 0.2);
 
 	// Output data points
-	writeDataPoints(outFileStr, participants, dataPoints, strictness);
+	writeDataPoints(outFileStr, participants, dataPoints, granularity);
 
 	return 0;
 }
@@ -66,7 +65,7 @@ int TimeAnalyzer::readDataPoints(const std::string& inFileStr, const unsigned in
 	return 0;
 }
 
-std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::transformDataPoints(const std::vector<RawDataPoint>& original, const unsigned int numParticipants, TimeCompStrictness strictness) {
+std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::transformDataPoints(const std::vector<RawDataPoint>& original, const unsigned int numParticipants, Granularity granularity) {
 	std::vector<DataPoint> compressed;
 	if (original.size() == 0) return compressed;
 
@@ -77,7 +76,7 @@ std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::transformDataPoints(const std
 
 	for (unsigned int i = 1; i < original.size(); ++i) {
 		DataPoint& last = compressed[compressed.size() - 1];
-		if (isSameTime(original[i].m_time, last.m_time, strictness)) {
+		if (isSameTime(original[i].m_time, last.m_time, granularity)) {
 			++last.m_count[original[i].m_senderId];
 		} else {
 			DataPoint tmp { original[i].m_time, std::vector<int>(numParticipants) };
@@ -87,66 +86,64 @@ std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::transformDataPoints(const std
 	}
 
 	// Insert missing data points
-	compressed = expandDataPoints(compressed, numParticipants, strictness);
+	compressed = expandDataPoints(compressed, numParticipants, granularity);
 	return compressed;
 }
 
-std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::expandDataPoints(const std::vector<DataPoint>& original, const unsigned int numParticipants, TimeCompStrictness strictness) {
+std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::expandDataPoints(const std::vector<DataPoint>& original, const unsigned int numParticipants, Granularity granularity) {
 	std::vector<DataPoint> expanded;
 	if (original.size() == 0) return expanded;
 	expanded.push_back(original[0]);
 	for (unsigned int i = 1; i < original.size(); ++i) {
-		std::time_t nextTime = getNextTime(expanded[expanded.size() - 1].m_time, strictness);
-		while (!isSameTime(original[i].m_time, nextTime, strictness)) {
+		std::time_t nextTime = getNextTime(expanded[expanded.size() - 1].m_time, granularity);
+		while (!isSameTime(original[i].m_time, nextTime, granularity)) {
 			expanded.push_back(DataPoint{nextTime, std::vector<int>(numParticipants)});
-			nextTime = getNextTime(nextTime, strictness);
+			nextTime = getNextTime(nextTime, granularity);
 		}
 		expanded.push_back(original[i]);
 	}
 	return expanded;
 }
 
-bool TimeAnalyzer::isSameTime(const std::time_t a, const std::time_t b, TimeCompStrictness strictness) {
+bool TimeAnalyzer::isSameTime(const std::time_t a, const std::time_t b, Granularity granularity) {
 	const std::tm aTimeInfo = *std::localtime(&a);
 	const std::tm bTimeInfo = *std::localtime(&b);
 
-	switch (strictness) {
-		case TimeCompStrictness::DAY:
+	switch (granularity) {
+		case Granularity::DAY:
 			return aTimeInfo.tm_year == bTimeInfo.tm_year && aTimeInfo.tm_yday == bTimeInfo.tm_yday;
-		case TimeCompStrictness::MONTH:
+		case Granularity::MONTH:
 			return aTimeInfo.tm_year == bTimeInfo.tm_year && aTimeInfo.tm_mon == bTimeInfo.tm_mon;
-		case TimeCompStrictness::YEAR:
+		case Granularity::YEAR:
 			return aTimeInfo.tm_year == bTimeInfo.tm_year;
 		default: return a == b;
 	}
 }
 
-std::time_t TimeAnalyzer::getNextTime(const std::time_t startTime, TimeCompStrictness strictness) {
+std::time_t TimeAnalyzer::getNextTime(const std::time_t startTime, Granularity granularity) {
 	std::tm* startTimeInfo = std::localtime(&startTime);
 	std::tm nextTimeInfo = {0};
 	nextTimeInfo.tm_year = startTimeInfo->tm_year;
 	nextTimeInfo.tm_mon = startTimeInfo->tm_mon;
 	nextTimeInfo.tm_mday = startTimeInfo->tm_mday;
-	switch (strictness) {
-		case TimeCompStrictness::DAY:
+	switch (granularity) {
+		case Granularity::DAY:
 			++nextTimeInfo.tm_mday; break;
-		case TimeCompStrictness::MONTH:
+		case Granularity::MONTH:
 			++nextTimeInfo.tm_mon; break;
-		case TimeCompStrictness::YEAR:
+		case Granularity::YEAR:
 			++nextTimeInfo.tm_year; break;
 		default: return startTime + 1;
 	}
 	return std::mktime(&nextTimeInfo);
 }
 
-int TimeAnalyzer::writeDataPoints(const std::string& outFileStr, const std::vector<std::string>& participants, const std::vector<DataPoint>& dataPoints, TimeCompStrictness strictness) {
+int TimeAnalyzer::writeDataPoints(const std::string& outFileStr, const std::vector<std::string>& participants, const std::vector<DataPoint>& dataPoints, Granularity granularity) {
 	std::ofstream outFile(outFileStr);
 	if (outFile.bad()) return 1;
 
 	// Write headers
-	if (strictness <= TimeCompStrictness::YEAR) outFile << "year,";
-	if (strictness <= TimeCompStrictness::MONTH) outFile << "month,";
-	if (strictness <= TimeCompStrictness::DAY) outFile << "day,";
+	if (granularity <= Granularity::YEAR) outFile << "date,";
 	for (const std::string& participant : participants) {
 		outFile << participant << ',';
 	}
@@ -155,9 +152,11 @@ int TimeAnalyzer::writeDataPoints(const std::string& outFileStr, const std::vect
 	// Write datapoints
 	for (const DataPoint& dp : dataPoints) {
 		const std::tm* timeInfo = std::localtime(&dp.m_time);
-		if (strictness <= TimeCompStrictness::YEAR) outFile << timeInfo->tm_year + 1900 << ',';
-		if (strictness <= TimeCompStrictness::MONTH) outFile << timeInfo->tm_mon + 1 << ',';
-		if (strictness <= TimeCompStrictness::DAY) outFile << timeInfo->tm_mday << ',';
+		std::string dateString;
+		if (granularity <= Granularity::YEAR) dateString += std::to_string(timeInfo->tm_year + 1900) + '-';
+		if (granularity <= Granularity::MONTH) dateString += std::to_string(timeInfo->tm_mon + 1) + '-';
+		if (granularity <= Granularity::DAY) dateString += std::to_string(timeInfo->tm_mday) + '-';
+		outFile << dateString.substr(0, dateString.length() - 1) << ','; 
 
 		for (unsigned int i = 0; i < dp.m_count.size(); ++i) {
 			outFile << dp.m_count[i] << ',';
