@@ -1,6 +1,7 @@
 #ifndef _TIME_ANALYZER
 #define _TIME_ANALYZER
 
+#include <chrono>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -13,24 +14,34 @@ public:
 	static int analyze(const std::string& inFileStr, const std::string& outFileStr, const std::vector<std::string>& participants);
 
 private:
-	struct DataPoint {
-		int m_year = -1;
-		int m_month = -1;
-		int m_day = -1;
-		std::vector<int> m_counts;
-
-		bool sameDate (const DataPoint& other) const {
-			return
-				m_year == other.m_year &&
-				m_month == other.m_month &&
-				m_day == other.m_day;
-		}
+	enum class TimeCompStrictness {
+		DAY, MONTH, YEAR
 	};
 
-	static int outputDataPoint(std::ofstream& file, const DataPoint& dataPoint);
-	static int readDataPoints(const std::string& inFileStr, const unsigned int numParticipants, std::vector<DataPoint>& dataPoints);
+	struct RawDataPoint {
+		std::time_t m_time;
+		int m_senderId;
+	};
+
+	struct DataPoint {
+		std::time_t m_time;
+		std::vector<int> m_count;
+	};
+
+	static int readDataPoints(const std::string& inFileStr, const unsigned int numParticipants, std::vector<RawDataPoint>& dataPoints);
 	static int writeDataPoints(const std::string& outFileStr, const std::vector<std::string>& participants, const std::vector<DataPoint>& dataPoints);
-	static std::vector<DataPoint> compressDataPoints(const std::vector<DataPoint>& dataPoints);
+	static bool isSameTime(const std::time_t a, const std::time_t b, TimeCompStrictness strictness);
+	static std::time_t getNextTime(const std::time_t time, TimeCompStrictness strictness);
+
+	/**
+	 * @brief Convert raw data points into compressed data points
+	 * @param dataPoints raw data points
+	 * @param numParticipants number of participants
+	 * @return compressed data points
+	 */
+	static std::vector<DataPoint> transformDataPoints(const std::vector<RawDataPoint>& dataPoints, const unsigned int numParticipants);
+	static std::vector<DataPoint> expandDataPoints(const std::vector<DataPoint>& dataPoints, const unsigned int numParticipants, TimeCompStrictness strictness);
+	static std::vector<DataPoint> smoothEMA(const std::vector<DataPoint>& dataPoints, const unsigned int numParticipants, double alpha);
 
 	template<typename T>
 	static int parseNum(std::stringstream& s, T* num) {

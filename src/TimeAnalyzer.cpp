@@ -1,6 +1,5 @@
 #include "TimeAnalyzer.h"
 #include <algorithm>
-#include <chrono>
 #include <iostream>
 
 int TimeAnalyzer::outputTimeLog(const std::string& outputFile, bool isFirstFile, const std::vector<Message>& messages, const std::vector<std::string>& participants) {
@@ -11,67 +10,31 @@ int TimeAnalyzer::outputTimeLog(const std::string& outputFile, bool isFirstFile,
 	if (!outFile.is_open()) return 1;
 	
 	// Output data points
-	DataPoint cur;
 	for (auto m = messages.rbegin(); m != messages.rend(); ++m) {
-		std::time_t messageTime = m->m_timestamp / 1000;
-		std::tm* timeInfo = std::localtime(&messageTime);
-
-		if (timeInfo->tm_mday != cur.m_day || timeInfo->tm_mon != cur.m_month || timeInfo->tm_year != cur.m_year) {
-			// Output the existing data point
-			if (cur.m_year >= 0) {
-				if (outputDataPoint(outFile, cur)) return 1;
-			}
-
-			// Reset current data point
-			cur.m_year = timeInfo->tm_year;
-			cur.m_month = timeInfo->tm_mon;
-			cur.m_day = timeInfo->tm_mday;
-			cur.m_counts = std::vector<int>(participants.size());
-		}
-
-		++cur.m_counts[m->m_senderId];
+		const std::time_t messageTime = m->m_timestamp / 1000;
+		outFile << messageTime << ',' << m->m_senderId << ',' << std::endl;
 	}
 
-	// Output the existing data point
-	if (cur.m_year >= 0) {
-		if (outputDataPoint(outFile, cur)) return 1;
-	}
-
-	return 0;
-}
-
-int TimeAnalyzer::outputDataPoint(std::ofstream& file, const DataPoint& dataPoint) {
-	file
-		<< dataPoint.m_year + 1900 << ','
-		<< dataPoint.m_month + 1 << ','
-		<< dataPoint.m_day << ',';
-
-	for (int n : dataPoint.m_counts) {
-		file << n << ',';
-	}
-
-	file << std::endl;
 	return 0;
 }
 
 int TimeAnalyzer::analyze(const std::string& inFileStr, const std::string& outFileStr, const std::vector<std::string>& participants) {
+	std::vector<RawDataPoint> rawDataPoints;
 	std::vector<DataPoint> dataPoints;
 
 	// Read in data points
-	if (readDataPoints(inFileStr, participants.size(), dataPoints)) return 1;
+	if (readDataPoints(inFileStr, participants.size(), rawDataPoints)) return 1;
 
 	// Sort data points
-	std::sort(dataPoints.begin(), dataPoints.end(), [](const DataPoint& a, const DataPoint& b){
-		if (a.m_year < b.m_year) return true;
-		if (a.m_year > b.m_year) return false;
-		if (a.m_month < b.m_month) return true;
-		if (a.m_month > b.m_month) return false;
-		if (a.m_day < b.m_day) return true;
-		return false;
+	std::sort(rawDataPoints.begin(), rawDataPoints.end(), [](const RawDataPoint& a, const RawDataPoint& b) {
+		return a.m_time < b.m_time;
 	});
 
 	// Compress data points (by day, week, month, year)
-	dataPoints = compressDataPoints(dataPoints);
+	dataPoints = transformDataPoints(rawDataPoints, participants.size());
+
+	// Smooth out data points (sliding window average or EMA)
+	// dataPoints = smoothEMA(dataPoints, participants.size(), 0.2);
 
 	// Output data points
 	writeDataPoints(outFileStr, participants, dataPoints);
@@ -79,7 +42,7 @@ int TimeAnalyzer::analyze(const std::string& inFileStr, const std::string& outFi
 	return 0;
 }
 
-int TimeAnalyzer::readDataPoints(const std::string& inFileStr, const unsigned int numParticipants, std::vector<DataPoint>& dataPoints) {
+int TimeAnalyzer::readDataPoints(const std::string& inFileStr, const unsigned int numParticipants, std::vector<RawDataPoint>& dataPoints) {
 	std::ifstream inFile(inFileStr);
 	if (inFile.bad()) return 1;
 
@@ -90,49 +53,90 @@ int TimeAnalyzer::readDataPoints(const std::string& inFileStr, const unsigned in
 		if (!*lineBuf) continue;
 
 		std::stringstream line(lineBuf);
-		DataPoint cur;
-		cur.m_counts = std::vector<int>(numParticipants);
+		RawDataPoint cur;
 		char curChar = 0;
-		if (parseNum(line, &cur.m_year)) return 1;
+		if (parseNum(line, &cur.m_time)) return 1;
 		line >> curChar; if (curChar != ',') return 1;
-		if (parseNum(line, &cur.m_month)) return 1;
+		if (parseNum(line, &cur.m_senderId)) return 1;
 		line >> curChar; if (curChar != ',') return 1;
-		if (parseNum(line, &cur.m_day)) return 1;
-		line >> curChar; if (curChar != ',') return 1;
-
-		unsigned int i = 0;
-		do {
-			if (parseNum(line, &cur.m_counts[i])) return 1;
-			line >> curChar; if (curChar != ',') return 1;
-			curChar = line.peek();
-			++i;
-		} while (curChar >= '0' && curChar <= '9');
 		dataPoints.push_back(cur);
 	}
 
 	return 0;
 }
 
-std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::compressDataPoints(const std::vector<DataPoint>& original) {
+std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::transformDataPoints(const std::vector<RawDataPoint>& original, const unsigned int numParticipants) {
+	const TimeCompStrictness strictness = TimeCompStrictness::DAY;
 	std::vector<DataPoint> compressed;
 	if (original.size() == 0) return compressed;
 
-	compressed.push_back(original[0]);
-	DataPoint* last = &compressed[0];
+	// Compress and transform data points
+	DataPoint first { original[0].m_time, std::vector<int>(numParticipants) };
+	first.m_count[original[0].m_senderId] = 1;
+	compressed.push_back(first);
 
 	for (unsigned int i = 1; i < original.size(); ++i) {
-		const DataPoint& cur = original[i];
-		if (cur.sameDate(*last)) {
-			for (unsigned int j = 0; j < cur.m_counts.size(); ++j) {
-				last->m_counts[j] += cur.m_counts[j];
-			}
+		DataPoint& last = compressed[compressed.size() - 1];
+		if (isSameTime(original[i].m_time, last.m_time, strictness)) {
+			++last.m_count[original[i].m_senderId];
 		} else {
-			compressed.push_back(original[i]);
-			last = &compressed[compressed.size() - 1];
+			DataPoint tmp { original[i].m_time, std::vector<int>(numParticipants) };
+			tmp.m_count[original[0].m_senderId] = 1;
+			compressed.push_back(tmp);
 		}
 	}
 
+	// Insert missing data points
+	compressed = expandDataPoints(compressed, numParticipants, strictness);
 	return compressed;
+}
+
+std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::expandDataPoints(const std::vector<DataPoint>& original, const unsigned int numParticipants, TimeCompStrictness strictness) {
+	std::vector<DataPoint> expanded;
+	if (original.size() == 0) return expanded;
+	expanded.push_back(original[0]);
+	for (unsigned int i = 1; i < original.size(); ++i) {
+		std::time_t nextTime = getNextTime(expanded[expanded.size() - 1].m_time, strictness);
+		while (!isSameTime(original[i].m_time, nextTime, strictness)) {
+			expanded.push_back(DataPoint{nextTime, std::vector<int>(numParticipants)});
+			nextTime = getNextTime(nextTime, strictness);
+		}
+		expanded.push_back(original[i]);
+	}
+	return expanded;
+}
+
+bool TimeAnalyzer::isSameTime(const std::time_t a, const std::time_t b, TimeCompStrictness strictness) {
+	const std::tm aTimeInfo = *std::localtime(&a);
+	const std::tm bTimeInfo = *std::localtime(&b);
+
+	switch (strictness) {
+		case TimeCompStrictness::DAY:
+			return aTimeInfo.tm_year == bTimeInfo.tm_year && aTimeInfo.tm_yday == bTimeInfo.tm_yday;
+		case TimeCompStrictness::MONTH:
+			return aTimeInfo.tm_year == bTimeInfo.tm_year && aTimeInfo.tm_mon == bTimeInfo.tm_mon;
+		case TimeCompStrictness::YEAR:
+			return aTimeInfo.tm_year == bTimeInfo.tm_year;
+		default: return a == b;
+	}
+}
+
+std::time_t TimeAnalyzer::getNextTime(const std::time_t startTime, TimeCompStrictness strictness) {
+	std::tm* startTimeInfo = std::localtime(&startTime);
+	std::tm nextTimeInfo = {0};
+	nextTimeInfo.tm_year = startTimeInfo->tm_year;
+	nextTimeInfo.tm_mon = startTimeInfo->tm_mon;
+	nextTimeInfo.tm_mday = startTimeInfo->tm_mday;
+	switch (strictness) {
+		case TimeCompStrictness::DAY:
+			++nextTimeInfo.tm_mday; break;
+		case TimeCompStrictness::MONTH:
+			++nextTimeInfo.tm_mon; break;
+		case TimeCompStrictness::YEAR:
+			++nextTimeInfo.tm_year; break;
+		default: return startTime + 1;
+	}
+	return std::mktime(&nextTimeInfo);
 }
 
 int TimeAnalyzer::writeDataPoints(const std::string& outFileStr, const std::vector<std::string>& participants, const std::vector<DataPoint>& dataPoints) {
@@ -148,12 +152,38 @@ int TimeAnalyzer::writeDataPoints(const std::string& outFileStr, const std::vect
 
 	// Write datapoints
 	for (const DataPoint& dp : dataPoints) {
-		outFile << dp.m_year << '-' << dp.m_month << '-' << dp.m_day << ',';
-		for (unsigned int i = 0; i < dp.m_counts.size(); ++i) {
-			outFile << dp.m_counts[i] << ',';
+		const std::tm* timeInfo = std::localtime(&dp.m_time);
+		outFile << timeInfo->tm_year + 1900 << '-' << timeInfo->tm_mon + 1 << '-' << timeInfo->tm_mday << ',';
+		for (unsigned int i = 0; i < dp.m_count.size(); ++i) {
+			outFile << dp.m_count[i] << ',';
 		}
 		outFile << std::endl;
 	}
 
 	return 0;
+}
+
+std::vector<TimeAnalyzer::DataPoint> TimeAnalyzer::smoothEMA(const std::vector<DataPoint>& original, const unsigned int numParticipants, double alpha) {
+	if (original.size() == 0) return original;
+	std::vector<DataPoint> dataPoints(original.size());
+	/*std::vector<double> prev(numParticipants);
+	const double beta = 1.0 - alpha;
+
+	// Initialize EMA calculation
+	dataPoints[0] = original[0];
+	for (unsigned int i = 0; i < dataPoints[0].m_count.size(); ++i) {
+		prev[i] = dataPoints[0].m_counts[i];
+	}
+
+	for (unsigned int i = 1; i < original.size(); ++i) {
+		dataPoints[i].m_year = original[i].m_year;
+		dataPoints[i].m_month = original[i].m_month;
+		dataPoints[i].m_day = original[i].m_day;
+		for (unsigned int j = 0; j < original[i].m_counts.size(); ++j) {
+			prev[j] = alpha * original[i].m_counts[j] + beta * prev[j];
+			dataPoints[i].m_counts.push_back(prev[j]);
+		}
+	}*/
+
+	return dataPoints;
 }
