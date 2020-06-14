@@ -5,6 +5,7 @@
 #include "Message.h"
 #include "MessageParser.h"
 #include "TimeAnalyzer.h"
+#include "WordAnalyzer.h"
 
 int main(const int argc, const char* const* argv) {
 	// Validate options
@@ -36,6 +37,7 @@ int main(const int argc, const char* const* argv) {
 
 	std::string outputFile(argv[argIndex++]);
 	std::string timeLogFile = "timelog_temp.csv";
+	std::string wordLogFile = "wordlog_temp.csv";
 
 	std::vector<std::string> participants;
 
@@ -65,11 +67,16 @@ int main(const int argc, const char* const* argv) {
 			return 1;
 		}
 
+		if (WordAnalyzer::outputWordLog(wordLogFile, isFirstFile, messages, participants)) {
+			std::cerr << "Error while generating word log: " << wordLogFile << std::endl;
+			return 1;
+		}
+
 		isFirstFile = false;
 	}
 
 	// Do time analysis
-	if (TimeAnalyzer::analyze(timeLogFile, outputFile, participants, granularity)) {
+	if (TimeAnalyzer::analyze(timeLogFile, outputFile + "_time.csv", participants, granularity)) {
 		std::cerr << "Error while analyzing time log: " << timeLogFile << std::endl;
 		return 1;
 	}
