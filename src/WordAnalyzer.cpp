@@ -41,15 +41,26 @@ int WordAnalyzer::outputWordLog(const std::string& outputFile, bool isFirstFile,
 }
 
 std::string WordAnalyzer::getNormalizedWord(std::stringstream& line) {
-	std::string normalized;
 	std::string word;
+	std::string normalized;
 	line >> word;
+
+	// Handle emoticons and emojis
+	if (word[0] == ':' || word[0] == '\\') {
+		for (unsigned int i = 0; i < word.size(); ++i) {
+			if (word[i] == ',') normalized += '\'';
+			else normalized += word[i];
+		}
+		return normalized;
+	}
+
+	// Handle normal text
 	for (unsigned int i = 0; i < word.size(); ++i) {
 		if (word[i] >= '0' && word[i] <= '9') {
 			normalized += word[i];
 		} else if (word[i] >= 'A' && word[i] <= 'Z') {
 			normalized += word[i] - 'A' + 'a';
-		} else if ((word[i] >= 'a' && word[i] <= 'z') || word[i] == '\'') {
+		} else if ((word[i] >= 'a' && word[i] <= 'z') || word[i] == '\'' || word[i] == '-') {
 			normalized += word[i];
 		} else {
 			for (unsigned int j = word.size() - 1; j > i; --j) {
