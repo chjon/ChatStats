@@ -67,6 +67,7 @@ int main(const int argc, const char* const* argv) {
 			return 1;
 		}
 
+		// Add messages to word analysis
 		if (WordAnalyzer::outputWordLog(wordLogFile, isFirstFile, messages, participants)) {
 			std::cerr << "Error while generating word log: " << wordLogFile << std::endl;
 			return 1;
@@ -82,6 +83,10 @@ int main(const int argc, const char* const* argv) {
 	}
 
 	// Do word analysis
+	if (WordAnalyzer::analyze(wordLogFile, outputFile + "_word.csv", participants)) {
+		std::cerr << "Error while analyzing word log: " << wordLogFile << std::endl;
+		return 1;
+	}
 
 	return 0;
 }

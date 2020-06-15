@@ -1,6 +1,5 @@
 #include "WordAnalyzer.h"
 #include <fstream>
-#include <map>
 
 int WordAnalyzer::outputWordLog(const std::string& outputFile, bool isFirstFile, const std::vector<Message>& messages, const std::vector<std::string>& participants) {
 	// Open output file
@@ -70,4 +69,72 @@ std::string WordAnalyzer::getNormalizedWord(std::stringstream& line) {
 		}
 	}
 	return normalized;
+}
+
+int WordAnalyzer::analyze(const std::string& inFileStr, const std::string& outFileStr, const std::vector<std::string>& participants) {
+	std::map<std::string, std::vector<int>> wordCounts;
+	if (readWordFile(inFileStr, participants.size(), wordCounts)) return 1;
+	if (writeWordFile(outFileStr, participants, wordCounts)) return 1;
+	return 0;
+}
+
+int WordAnalyzer::readWordFile(const std::string& inFileStr, unsigned int numParticipants, std::map<std::string, std::vector<int>>& wordCounts) {
+	std::ifstream inFile(inFileStr);
+	if (!inFile.is_open()) return 1;
+
+	const unsigned int maxLineLength = 2048;
+	char* lineBuf = reinterpret_cast<char*>(malloc(maxLineLength * sizeof(char)));
+	while (!inFile.eof() && !inFile.bad()) {
+		inFile.getline(lineBuf, maxLineLength);
+		if (!*lineBuf) continue;
+
+		std::stringstream line(lineBuf);
+		char curChar;
+		line >> curChar;
+		std::string word;
+		while (curChar != ',') {
+			word += curChar;
+			line >> curChar;
+		}
+		if (line.bad()) return 1;
+		
+		const auto found = wordCounts.find(word);
+		std::vector<int> wordCount(numParticipants);
+		if (found != wordCounts.end()) {
+			wordCount = found->second;
+		}
+
+		for (unsigned int i = 0; i < numParticipants; ++i) {
+			int count = 0;
+			if (parseNum(line, &count)) return 1;
+			line >> curChar; if (line.bad() || curChar != ',') return 1;
+			wordCount[i] += count;
+		}
+		wordCounts.emplace(word, wordCount);
+	}
+
+	return 0;
+}
+
+int WordAnalyzer::writeWordFile(const std::string& outFileStr, const std::vector<std::string>& participants, std::map<std::string, std::vector<int>>& wordCounts) {
+	std::ofstream outFile(outFileStr);
+	if (!outFile.is_open()) return 1;
+
+	// Output header
+	outFile << "word,";
+	for (std::string participant : participants) {
+		outFile << participant << ",";
+	}
+	outFile << std::endl;
+
+	// Output words
+	for (auto iter : wordCounts) {
+		outFile << iter.first << ',';
+		for (unsigned int i = 0; i < iter.second.size(); ++i) {
+			outFile << iter.second[i] << ',';
+		}
+		outFile << std::endl;
+	}
+
+	return 0;
 }
