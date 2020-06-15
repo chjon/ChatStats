@@ -110,7 +110,14 @@ int WordAnalyzer::readWordFile(const std::string& inFileStr, unsigned int numPar
 			line >> curChar; if (line.bad() || curChar != ',') return 1;
 			wordCount[i] += count;
 		}
-		wordCounts.emplace(word, wordCount);
+
+		if (found == wordCounts.end()) {
+			wordCounts.emplace(word, wordCount);
+		} else {
+			for (unsigned int i = 0; i < numParticipants; ++i) {
+				found->second[i] += wordCount[i];
+			}
+		}
 	}
 
 	return 0;
