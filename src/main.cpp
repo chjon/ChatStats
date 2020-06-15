@@ -40,6 +40,8 @@ int main(const int argc, const char* const* argv) {
 	std::string wordLogFile = "wordlog_temp.csv";
 
 	std::vector<std::string> participants;
+	std::vector<unsigned int> numMessages;
+	std::vector<unsigned long> messageLengths;
 
 	// Parse input files
 	bool isFirstFile = true;
@@ -73,6 +75,17 @@ int main(const int argc, const char* const* argv) {
 			return 1;
 		}
 
+		// Add messages to total count
+		for (Message m : messages) {
+			while (m.m_senderId >= numMessages.size()) {
+				numMessages.push_back(0);
+				messageLengths.push_back(0);
+			}
+
+			numMessages[m.m_senderId] += 1;
+			messageLengths[m.m_senderId] += m.m_content.size();
+		}
+
 		isFirstFile = false;
 	}
 
@@ -86,6 +99,12 @@ int main(const int argc, const char* const* argv) {
 	if (WordAnalyzer::analyze(wordLogFile, outputFile + "_word.csv", participants)) {
 		std::cerr << "Error while analyzing word log: " << wordLogFile << std::endl;
 		return 1;
+	}
+
+	// Output total word count and and message length
+	std::cout << "name, count, total length" << std::endl;
+	for (unsigned int i = 0; i < participants.size(); ++i) {
+		std::cout << participants[i] << ", " << numMessages[i] << ", " << messageLengths[i] << std::endl;
 	}
 
 	return 0;
